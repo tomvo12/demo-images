@@ -5,15 +5,15 @@ source "azure-arm" "vm" {
   async_resourcegroup_delete          = true
   secure_boot_enabled                 = true
   use_azure_cli_auth                  = true
+  security_type                       = "TrustedLaunch"
   vm_size                             = "Standard_D8s_v5"
-  #vm_size                             = "Standard_D8d_v4" 
-  #vm_size                             = "Standard_D4_v4"
   license_type                        = "Windows_Client"
 
   # winrm options
   communicator                        = "winrm"
   winrm_username                      = "packer"
   winrm_insecure                      = true
+  winrm_timeout                       = "15m"
   winrm_use_ssl                       = true
 
   # os settings

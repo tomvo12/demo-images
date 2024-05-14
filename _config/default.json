@@ -19,6 +19,10 @@
 			"source": "alias"
 		},
 		{
+			"name": "devHome",
+			"source": "alias"
+		},
+		{
 			"name": "Microsoft.VisualStudio.Locator",
 			"scope": "all"
 		},

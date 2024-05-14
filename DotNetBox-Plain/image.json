@@ -93,10 +93,6 @@
 			"scope": "machine"
 		},
 		{
-			"name": "podman",
-			"source": "alias"			
-		},
-		{
 			"name": "podman-desktop",
 			"source": "alias"			
 		}
