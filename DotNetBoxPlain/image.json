@@ -58,27 +58,7 @@
 			"source": "alias"
 		},
 		{
-			"name": "Microsoft.VisualStudio.2022.Enterprise",
-			"scope": "machine",
-			"override": [
-				"--add Microsoft.VisualStudio.Workload.CoreEditor",
-				"--add Microsoft.VisualStudio.Workload.Azure",
-				"--add Microsoft.VisualStudio.Workload.NetCrossPlat",
-				"--add Microsoft.VisualStudio.Workload.NetWeb",
-				"--add Microsoft.VisualStudio.Workload.Node",
-				"--add Microsoft.VisualStudio.Workload.Python",
-				"--add Microsoft.VisualStudio.Workload.ManagedDesktop",
-				"--includeRecommended",
-				"--installWhileDownloading",
-				"--quiet",
-				"--norestart",
-				"--force",
-				"--wait",
-				"--nocache"
-			]
-		},
-		{
-			"name": "git",
+			"name": "vs2022EntWithConfig",
 			"source": "alias"
 		},
 		{
