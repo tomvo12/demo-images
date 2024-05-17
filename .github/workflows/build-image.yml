@@ -244,7 +244,7 @@ jobs:
   archive:
     needs: release
     runs-on: ubuntu-latest    
-    if: ${{ needs.release.outputs.archive }}
+    if: ${{ needs.release.outputs.archive == 'true' }}
 
     defaults:
       run:
