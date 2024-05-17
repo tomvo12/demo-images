@@ -1,7 +1,7 @@
 {
 	"$schema": "../_schemas/image.schema.json",
 	"publisher": "DeveloperCompass",
-	"offer": "PlainDevBox",
+	"offer": "DotNetBox",
 	"sku": "win11-dotnet-devbox",
 	"regions": [
 		"Germany West Central"
