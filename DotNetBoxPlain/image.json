@@ -80,6 +80,10 @@
 		{
 			"name": "podman-desktop",
 			"source": "alias"			
+		},
+		{
+			"name": "mattermost",
+			"source": "alias"
 		}
 	],
 	"configure": []

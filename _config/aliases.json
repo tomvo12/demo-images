@@ -228,6 +228,11 @@
 		}
 	],
 
+	"mattermost": {
+		"name": "Mattermost.MattermostDesktop",
+		"scope": "machine"
+	},
+
 	"podman-desktop": [
 
 		{
