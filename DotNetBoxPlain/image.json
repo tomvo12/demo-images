@@ -84,6 +84,18 @@
 		{
 			"name": "mattermost",
 			"source": "alias"
+		},
+		{
+			"name": "moniker:python3",
+			"scope": "machine"
+		},
+		{
+			"name": "FireDaemon.OpenSSL",
+			"scope": "machine"
+		},
+		{
+			"name": "Notepad++.Notepad++",
+			"scope": "machine"
 		}
 	],
 	"configure": []
