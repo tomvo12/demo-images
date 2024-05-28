@@ -96,6 +96,10 @@
 		{
 			"name": "Notepad++.Notepad++",
 			"scope": "machine"
+		},
+		{
+			"name": "nvm",
+			"scope": "machine"
 		}
 	],
 	"configure": []
