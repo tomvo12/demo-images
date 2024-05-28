@@ -98,7 +98,7 @@
 			"scope": "machine"
 		},
 		{
-			"name": "nvm",
+			"name": "CoreyButler.NVMforWindows",
 			"scope": "machine"
 		}
 	],
