@@ -82,7 +82,7 @@
 			"source": "alias"
 		},
 		{
-			"name": "moniker:teams",
+			"name": "Microsoft.Teams",
 			"scope": "machine"
 		},
 		{
