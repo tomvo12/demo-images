@@ -82,6 +82,10 @@
 			"source": "alias"
 		},
 		{
+			"name": "moniker:teams",
+			"scope": "machine"
+		},
+		{
 			"name": "moniker:python3",
 			"scope": "machine"
 		},
@@ -95,6 +99,14 @@
 		},
 		{
 			"name": "CoreyButler.NVMforWindows",
+			"scope": "machine"
+		},
+		{
+			"name": "Google.Chrome",
+			"scope": "machine"
+		},
+		{
+			"name": "Mozilla.Firefox",
 			"scope": "machine"
 		},
 		{
