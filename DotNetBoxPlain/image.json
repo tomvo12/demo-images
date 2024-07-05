@@ -83,7 +83,7 @@
 		},
 		{
 			"name": "Microsoft.Teams",
-			"scope": "machine"
+			"scope": "user"
 		},
 		{
 			"name": "moniker:python3",
@@ -99,7 +99,7 @@
 		},
 		{
 			"name": "CoreyButler.NVMforWindows",
-			"scope": "machine"
+			"scope": "user"
 		},
 		{
 			"name": "Google.Chrome",
