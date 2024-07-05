@@ -4,31 +4,42 @@
 
 
 	"$defs":{
+
 		"resourceId_ManagedIdentity": {
 			"type": "string"
 		},
+
 		"guid": {
 			"type": "string",
 			"pattern":"^[0-9A-Fa-f]{8}(?:-[0-9A-Fa-f]{4}){3}-[0-9A-Fa-f]{12}$"
 		},
+
 		"region":{
 			"type": "string",
 			"enum": [
 				"Australia East",
+				"Brazil South",
 				"Canada Central",
+				"Central US",
 				"West Europe",
+				"Germany West Central",
+				"Italy North",
 				"Japan East",
 				"UK South",
 				"East US",
 				"East US 2",
+				"South Africa North",
 				"South Central US",
+				"Southeast Asia",
+				"Switzerland North",
+				"Sweden Central",
 				"West US 3",
 				"Central India",
 				"East Asia",
 				"North Europe",
-				"Korea Central"
-			]
+				"Korea Central"			]
 		},
+
 		"package": {
 			"type": "object",
 			"description": "A package to install in the image",
@@ -104,6 +115,7 @@
 			"required": [ "name", "scope" ],
 			"additionalProperties": false
 		},
+
 		"packageRef": {
 			"type": "object",
 			"description": "A package to install in the image by reference (using the 'alias' source)",
@@ -119,6 +131,34 @@
 				}
 			},
 			"required": [ "name", "source" ],
+			"additionalProperties": false
+		},
+
+		"languageId": {
+			"type": "string",
+			"description": "A language defined by the IETF BCP47 language tag (https://tools.ietf.org/html/bcp47)",
+			"pattern": "^((en-GB-oed|i-ami|i-bnn|i-default|i-enochian|i-hak|i-klingon|i-lux|i-mingo|i-navajo|i-pwn|i-tao|i-tay|i-tsu|sgn-BE-FR|sgn-BE-NL|sgn-CH-DE)|(art-lojban|cel-gaulish|no-bok|no-nyn|zh-guoyu|zh-hakka|zh-min|zh-min-nan|zh-xiang))|(((\\\\b[A-Za-z]{2,3}(-[A-Za-z]{3}(-[A-Za-z]{3}){0,2})?)\\\\b)|\\\\b[A-Za-z]{4}\\\\b|\\\\b[A-Za-z]{5,8}\\\\b)(-(\\\\b[A-Za-z]{4}\\\\b))?(-([A-Za-z]{2}|[0-9]{3}))?(-([A-Za-z0-9]{5,8}|[0-9][A-Za-z0-9]{3}))*(-(0-9A-WY-Za-wy-z+))*(-x(-[A-Za-z0-9]{1,8})+))$"
+		},
+
+		"language": {
+			"type": "object",
+			"description": "The prefered and additonal language to install in the image",
+			"properties": {
+				"preferred": {
+					"$ref": "#/$defs/languageId",
+					"description": "The prefered language to install in the image",
+					"default": "en-US"
+				},
+				"additional": {
+					"type": "array",
+					"description": "List of additional languages to install in the image",
+					"default": [],
+					"items": {
+						"$ref": "#/$defs/languageId"
+					}
+				}
+			},
+			"required": [ "preferred" ],
 			"additionalProperties": false
 		}
 
