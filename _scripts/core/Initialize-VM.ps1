@@ -2,9 +2,9 @@
 $ProgressPreference = 'SilentlyContinue'	# hide any progress output
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
-if ([string]::IsNullOrEmpty($Env:ADMIN_USERNAME)) 	{ Throw "Env:ADMIN_USERNAME must be set" }
-if ([string]::IsNullOrEmpty($Env:ADMIN_PASSWORD)) 	{ Throw "Env:ADMIN_PASSWORD must be set" }
-if ([string]::IsNullOrEmpty($Env:DEVBOX_HOME)) 		{ Throw "Env:DEVBOX_HOME must be set" }
+if ([string]::IsNullOrEmpty($Env:ADMIN_USERNAME)) { Throw "Env:ADMIN_USERNAME must be set" }
+if ([string]::IsNullOrEmpty($Env:ADMIN_PASSWORD)) { Throw "Env:ADMIN_PASSWORD must be set" }
+if ([string]::IsNullOrEmpty($Env:DEVBOX_HOME)) { Throw "Env:DEVBOX_HOME must be set" }
 
 Get-ChildItem -Path (Join-Path $env:DEVBOX_HOME 'Modules') -Directory | Select-Object -ExpandProperty FullName | ForEach-Object {
 	Write-Host ">>> Importing PowerShell Module: $_"
@@ -13,7 +13,7 @@ Get-ChildItem -Path (Join-Path $env:DEVBOX_HOME 'Modules') -Directory | Select-O
 
 function Get-ShortcutTargetPath() {
 	param( 
-		[Parameter(Mandatory=$true)][string]$Path
+		[Parameter(Mandatory = $true)][string]$Path
 	)
 
 	$Shell = New-Object -ComObject ("WScript.Shell")
@@ -30,7 +30,7 @@ $downloadKeyVaultArtifact = {
 	$KeyVaultToken = Get-AzAccessToken -ResourceUrl $TokenEndpoint -ErrorAction Stop -WarningAction SilentlyContinue
 
 	Write-Host ">>> Downloading KeyVault Artifact $Source"
-	$KeyVaultHeaders = @{"Authorization" = "Bearer $($KeyVaultToken.Token)"}
+	$KeyVaultHeaders = @{"Authorization" = "Bearer $($KeyVaultToken.Token)" }
 	$KeyVaultResponse = Invoke-RestMethod -Uri "$($Source)?api-version=7.1" -Headers $KeyVaultHeaders -ErrorAction Stop
 		
 	Write-Host ">>> Decoding KeyVault Artifact $Source"
@@ -38,7 +38,8 @@ $downloadKeyVaultArtifact = {
 
 	if (Test-Path -Path $Destination -PathType Leaf) {  
 		Write-Host ">>> Resolved Artifact $Destination" 
-	} else {
+	}
+ else {
 		Write-Error "!!! Missing Artifact $Destination"
 	}
 }
@@ -55,7 +56,8 @@ $downloadArtifact = {
 
 	if (Test-Path -Path $Destination -PathType Leaf) { 
 		Write-Host ">>> Resolved Artifact $Destination" 
-	} else {
+	}
+ else {
 		Write-Error "!!! Missing Artifact $Destination"
 	}
 }
@@ -126,7 +128,8 @@ Invoke-ScriptSection -Title 'Expand System Partition' -ScriptBlock {
 	if ($partition.Size -lt $partitionSize.SizeMax) {
 		Write-Host ">>> Resizing System Partition to $([Math]::Round($partitionSize.SizeMax / 1GB,2)) GB" 
 		Resize-Partition -DiskNumber $partition.DiskNumber -PartitionNumber $partition.PartitionNumber -Size $partitionSize.SizeMax
-	} else {
+	}
+ else {
 		Write-Host ">>> No need to resize !!!"
 	}
 }
@@ -142,9 +145,19 @@ Invoke-ScriptSection -Title "Prepare Powershell Gallery" -ScriptBlock {
 	if (Get-Module -ListAvailable -Name PowerShellGet) {
 		Write-Host ">>> Upgrading Powershell Module: PowerShellGet"
 		Update-Module -Name PowerShellGet -AcceptLicense -Force -WarningAction SilentlyContinue -ErrorAction Stop
-	} else {
+	}
+ else {
 		Write-Host ">>> Installing Powershell Module: PowerShellGet" 
 		Install-Module -Name PowerShellGet -AcceptLicense -Force -AllowClobber -WarningAction SilentlyContinue -ErrorAction Stop
+	}
+}
+
+Invoke-ScriptSection -Title "Install desktop artifacts" -ScriptBlock {
+
+	$DesktopArtifacts = Join-Path -Path $env:DEVBOX_HOME -ChildPath 'Desktop'
+	if (Test-Path -Path $DesktopArtifacts -PathType Container) {
+		$desktopFolder = [Environment]::GetFolderPath("CommonDesktopDirectory")
+		Move-Item -Path $DesktopArtifacts\* -Destination $desktopFolder -Force -ErrorAction SilentlyContinue
 	}
 }
 
@@ -162,7 +175,8 @@ if (Test-Path -Path $Artifacts -PathType Container) {
 				if (Get-Module -ListAvailable -Name $_) {
 					Write-Host ">>> Upgrading Powershell Module: $_";
 					Update-Module -Name $_ -AcceptLicense -Force -WarningAction SilentlyContinue -ErrorAction Stop
-				} else {
+				}
+				else {
 					Write-Host ">>> Installing Powershell Module: $_";
 					Install-Module -Name $_ -AcceptLicense -Repository PSGallery -Force -AllowClobber -WarningAction SilentlyContinue -ErrorAction Stop
 				}
@@ -175,10 +189,11 @@ if (Test-Path -Path $Artifacts -PathType Container) {
 					Connect-AzAccount -Identity -ErrorAction Stop -WarningAction SilentlyContinue | Out-Null
 					Write-Host "- Azure login succeeded"
 					break
-				} catch {
-                    if ((Get-Date) -gt $timeout) { throw }
-                    Write-Host "- Azure login failed - retry in 10 seconds"
-                    Start-Sleep -Seconds 10
+				}
+				catch {
+					if ((Get-Date) -gt $timeout) { throw }
+					Write-Host "- Azure login failed - retry in 10 seconds"
+					Start-Sleep -Seconds 10
 				}
 			}
 		}
@@ -196,13 +211,14 @@ if (Test-Path -Path $Artifacts -PathType Container) {
 				if ($ArtifactUrl) {
 
 					$KeyVaultEndpoint = (Get-AzEnvironment -Name AzureCloud | Select-Object -ExpandProperty AzureKeyVaultServiceEndpointResourceId)
-					$KeyVaultPattern = $KeyVaultEndpoint.replace('://','://*.').trim() + '/*'
+					$KeyVaultPattern = $KeyVaultEndpoint.replace('://', '://*.').trim() + '/*'
 
 					if ($ArtifactUrl -like $KeyVaultPattern) {
 
 						$jobs += Start-Job -Scriptblock $downloadKeyVaultArtifact -ArgumentList ("$ArtifactUrl", "$ArtifactFile", "$KeyVaultEndpoint")
 
-					} else {
+					}
+					else {
 						
 						$jobs += Start-Job -Scriptblock $downloadArtifact -ArgumentList ("$ArtifactUrl", "$ArtifactFile")
 					}

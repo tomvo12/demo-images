@@ -98,10 +98,6 @@
 			"scope": "machine"
 		},
 		{
-			"name": "CoreyButler.NVMforWindows",
-			"scope": "user"
-		},
-		{
 			"name": "Google.Chrome",
 			"scope": "machine"
 		},
@@ -130,5 +126,7 @@
 			]
 		}
 	],
-	"configure": []
+	"configure": [
+		"[IMAGEROOT]/../_scripts/Install-nvm.ps1"
+	]
 }
