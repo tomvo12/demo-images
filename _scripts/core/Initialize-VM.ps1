@@ -154,7 +154,7 @@ Invoke-ScriptSection -Title "Prepare Powershell Gallery" -ScriptBlock {
 
 Invoke-ScriptSection -Title "Install desktop artifacts" -ScriptBlock {
 
-	$DesktopArtifacts = Join-Path -Path $env:DEVBOX_HOME -ChildPath 'Desktop'
+	$DesktopArtifacts = Join-Path -Path $env:DEVBOX_HOME -ChildPath 'Artifacts\Desktop'
 	if (Test-Path -Path $DesktopArtifacts -PathType Container) {
 		$desktopFolder = [Environment]::GetFolderPath("CommonDesktopDirectory")
 		Move-Item -Path $DesktopArtifacts\* -Destination $desktopFolder -Force -ErrorAction SilentlyContinue
