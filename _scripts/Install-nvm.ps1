@@ -24,7 +24,17 @@ if (-not(Test-IsPacker)) {
     [Environment]::SetEnvironmentVariable("NVM_SYMLINK","C:\Program Files\nodejs", [System.EnvironmentVariableTarget]::User)
 
     Move-Item -Path $downloadFolder -Destination "$nvm_home" -Force
-    [Environment]::SetEnvironmentVariable("PATH", "$PATH;$nvm_home", [System.EnvironmentVariableTarget]::User)
+    [Environment]::SetEnvironmentVariable("PATH", "$PATH%NVM_HOME%;%NVM_SYMLINK%", [System.EnvironmentVariableTarget]::User)
+
+$content = @"
+root: $nvm_home 
+path: C:\Program Files\nodejs 
+arch: $(&{ if ([Environment]::Is64BitOperatingSystem) { '64' } else { '' } })
+proxy: none
+"@ # | Out-File -FilePath "$nvm_home/settings.txt" -Force -Encoding utf8
+
+$Utf8NoBomEncoding = New-Object System.Text.UTF8Encoding $False
+[System.IO.File]::WriteAllLines("$nvm_home/settings.txt", $content, $Utf8NoBomEncoding)
 
     Write-Host ">>> Installed nvm into $nvm_home"
 }
