@@ -24,7 +24,8 @@ if (-not(Test-IsPacker)) {
     [Environment]::SetEnvironmentVariable("NVM_SYMLINK","C:\Program Files\nodejs", [System.EnvironmentVariableTarget]::User)
 
     Move-Item -Path $downloadFolder -Destination "$nvm_home" -Force
-    [Environment]::SetEnvironmentVariable("PATH", "$PATH%NVM_HOME%;%NVM_SYMLINK%", [System.EnvironmentVariableTarget]::User)
+    $USER_PATH = [System.Environment]::GetEnvironmentVariable("PATH", [System.EnvironmentVariableTarget]::User)
+    [Environment]::SetEnvironmentVariable("PATH", "$USER_PATH%NVM_HOME%;%NVM_SYMLINK%", [System.EnvironmentVariableTarget]::User)
 
 $content = @"
 root: $nvm_home 
