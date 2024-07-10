@@ -12,6 +12,5 @@ packer {
       version = ">= 0.0.0"
       source  = "github.com/rgl/windows-update"
     }
-    
   }
 }

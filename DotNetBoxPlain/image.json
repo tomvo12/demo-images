@@ -3,7 +3,6 @@
 	"publisher": "DeveloperCompass",
 	"offer": "DotNetBox",
 	"sku": "win11-dotnet-devbox",
-	"updates": "recommended",
 	"regions": [
 		"Germany West Central"
 	],
