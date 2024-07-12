@@ -19,7 +19,8 @@ if (-not(Test-IsPacker)) {
     $downloadFolder = Invoke-FileDownload -Url $url -Name "nvm-noinstall.zip" -Expand
 
     # create env variables
-    $nvm_home = "$HOME\AppData\Roaming\nvm"
+    $USER_HOME = [Environment]::GetEnvironmentVariable("HOME", [System.EnvironmentVariableTarget]::User)
+    $nvm_home = "$USER_HOME\AppData\Roaming\nvm"
     [Environment]::SetEnvironmentVariable("NVM_HOME", $nvm_home, [System.EnvironmentVariableTarget]::User)
     [Environment]::SetEnvironmentVariable("NVM_SYMLINK","C:\Program Files\nodejs", [System.EnvironmentVariableTarget]::User)
 
