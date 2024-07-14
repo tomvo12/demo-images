@@ -25,7 +25,7 @@ if (-not(Test-IsPacker)) {
 
     Move-Item -Path $downloadFolder -Destination "$nvm_home" -Force
     $USER_PATH = [System.Environment]::GetEnvironmentVariable("PATH", [System.EnvironmentVariableTarget]::User)
-    [Environment]::SetEnvironmentVariable("PATH", "$USER_PATH%NVM_HOME%;%NVM_SYMLINK%", [System.EnvironmentVariableTarget]::User)
+    [Environment]::SetEnvironmentVariable("PATH", "$USER_PATH$nvm_home;%NVM_SYMLINK%", [System.EnvironmentVariableTarget]::User)
 
 $content = @"
 root: $nvm_home 
