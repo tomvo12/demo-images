@@ -263,5 +263,16 @@ foreach ($package in $packages) {
 	}
 }
 
+# allow read/execute access for machine scope winget packages
+$wingetHome = join-path $env:ProgramFiles 'WinGet'
+if ((Test-IsPacker) -and (Test-Path -Path $wingetHome -PathType Container)) {
+	Write-Host ">>> Updating WinGet Package ACLs ..."
+	$wingetUSR = New-Object -TypeName 'System.Security.Principal.SecurityIdentifier' -ArgumentList @([System.Security.Principal.WellKnownSidType]::AuthenticatedUserSid, $null)
+	$wingetACR = New-Object System.Security.AccessControl.FileSystemAccessRule($wingetUSR, 'ReadAndExecute', 'ContainerInherit,ObjectInherit', 'None', 'Allow')
+	$wingetACL = Get-Acl -Path $wingetHome
+	$wingetACL.SetAccessRule($wingetACR)
+	$wingetACL | Set-Acl -Path $wingetHome
+}
+
 # remove the last successful package file
 Remove-Item -Path $lastSuccessPackageFile -Force -ErrorAction SilentlyContinue
