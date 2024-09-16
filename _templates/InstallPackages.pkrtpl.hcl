@@ -5,7 +5,7 @@ Get-ChildItem -Path (Join-Path $env:DEVBOX_HOME 'Modules') -Directory | Select-O
 
 if (Test-IsPacker) {
 	Write-Host ">>> Register ActiveSetup"
-	Register-ActiveSetup -Path $MyInvocation.MyCommand.Path -Name 'Install-Packages.ps1' -Elevate
+	Register-ActiveSetup -Path $MyInvocation.MyCommand.Path -Name 'Install-Packages.ps1'
 } else { 
     Write-Host ">>> Initializing transcript"
     Start-Transcript -Path ([system.io.path]::ChangeExtension($MyInvocation.MyCommand.Path, ".log")) -Append -Force -IncludeInvocationHeader; 
@@ -127,7 +127,7 @@ function Install-WinGetPackage {
 	}
 	
 	if ($Package | Has-Property -Name "override") { 
-		$arguments += "--override `"{0}`"" -f (($Package | Get-PropertyArray -Name "override") -join ' ' )
+		$arguments += [System.Environment]::ExpandEnvironmentVariables("--override `"{0}`"" -f (($Package | Get-PropertyArray -Name "override") -join ' ')) 
 	} else { 
 		$arguments += "--silent" 
 	} 
@@ -198,7 +198,7 @@ foreach ($package in $packages) {
 	# calculate the hash of the current package
 	$currentPackageHash = $package | ConvertTo-Json -Compress | ConvertTo-GUID
 
-	if ($lastSuccessPackageHash) {
+	if ((Test-IsPacker) -and ($lastSuccessPackageHash)) {
 
 		if ($currentPackageHash -eq $lastSuccessPackageHash) {
 			# reset last package hash to enable install of the next package again

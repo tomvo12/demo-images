@@ -17,6 +17,10 @@ concurrency:
   group: '${{ github.ref }}-${{ github.event.inputs.imageName }}'
   cancel-in-progress: true
 
+env:
+  # Azure CLI version 2.64.0 is broken (https://github.com/Azure/azure-cli/issues/29830). Fall back to latest when fixed.
+  azureCliVersion: 2.63.0
+
 jobs:
   build:
     if: ${{ (github.event.sender.type == 'Bot') }}
@@ -68,10 +72,17 @@ jobs:
           echo "devcenter_storage=$(echo $HCLJSON | jq --raw-output '.image.devCenter.storage // empty')" >> $GITHUB_OUTPUT          
           echo "devcenter_compute=$(echo $HCLJSON | jq --raw-output '.image.devCenter.compute // empty')" >> $GITHUB_OUTPUT          
           cat $GITHUB_OUTPUT | tee -a ${{ runner.temp }}/image.info
+      
+      - name: Resolve Packer Source Information
+        id: packer_source
+        run: |
+          echo "packer_skip_create_build_key_vault=$(sed -nr 's/^\s*skip_create_build_key_vault\s*=\s*(\w+)/\1/p' ../_packer/source.pkr.hcl | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+          cat $GITHUB_OUTPUT | tee -a ${{ runner.temp }}/image.info
 
       - name: Ensure Image Definition
         uses: azure/CLI@v2
         with:
+          azcliversion: ${{ env.azureCliVersion }}
           inlineScript:	|
             az sig image-definition create \
               --subscription ${{ steps.image.outputs.gallery_subscription }} \
@@ -90,6 +101,7 @@ jobs:
       - name: Delete Packer ResourceGroups        
         uses: azure/CLI@v2
         with:
+          azcliversion: ${{ env.azureCliVersion }}
           inlineScript: |
             RGNAME_PREFIX=$(echo "PKR-${{ inputs.imageName }}" | tr [:lower:] [:upper:])
             RGNAME_SUFFIX=$(echo "-${{ github.workflow }}" | tr [:lower:] [:upper:])
@@ -99,9 +111,11 @@ jobs:
             done; wait
   
       - name: Delete Packer KeyVaults
+        if: ${{ steps.packer_source.outputs.packer_skip_create_build_key_vault != 'true' }}
         continue-on-error: true
         uses: azure/CLI@v2
         with:
+          azcliversion: ${{ env.azureCliVersion }}
           inlineScript:	| 
             RGNAME_PREFIX=$(echo "PKR-${{ inputs.imageName }}" | tr [:lower:] [:upper:])
             RGNAME_SUFFIX=$(echo "-${{ github.workflow }}" | tr [:lower:] [:upper:])
@@ -129,6 +143,7 @@ jobs:
       - name: Create or Update DevBox Definition
         uses: azure/CLI@v2
         with:
+          azcliversion: ${{ env.azureCliVersion }}
           inlineScript:	|
             az extension add --name devcenter --upgrade --yes --allow-preview true
             
@@ -156,13 +171,12 @@ jobs:
         continue-on-error: true
         uses: azure/CLI@v2
         with:
+          azcliversion: ${{ env.azureCliVersion }}
           inlineScript:	| 
             for IMAGEVERSION in $(az sig image-version list --subscription ${{ steps.image.outputs.gallery_subscription }} --resource-group ${{ steps.image.outputs.gallery_resourcegroup }} --gallery-name ${{ steps.image.outputs.gallery_name }} --gallery-image-definition ${{ inputs.imageName }} --query "[?publishingProfile.excludeFromLatest].id | sort(@) | [::-1] | [3:]" --output tsv 2>/dev/null); do
               echo "Deleting image version '$IMAGEVERSION' ..." 
               az sig image-version delete --subscription ${{ steps.image.outputs.gallery_subscription }} --ids $IMAGEVERSION --output none &
             done; wait
-              
-
   release:
     needs: build
     runs-on: ubuntu-latest    
@@ -192,6 +206,7 @@ jobs:
       - name: Promote Image to Latest
         uses: azure/CLI@v2
         with:
+          azcliversion: ${{ env.azureCliVersion }}
           inlineScript:	|
             az sig image-version update \
               --subscription ${{ steps.image.outputs.gallery_subscription }} \
@@ -206,6 +221,7 @@ jobs:
         id: reference
         uses: azure/CLI@v2
         with:
+          azcliversion: ${{ env.azureCliVersion }}
           inlineScript:	|
             az extension add --name devcenter --upgrade --yes --allow-preview true
             
@@ -224,6 +240,7 @@ jobs:
       - name: Create or Update DevBox Definition
         uses: azure/CLI@v2
         with:
+          azcliversion: ${{ env.azureCliVersion }}
           inlineScript:	|
             az extension add --name devcenter --upgrade --yes --allow-preview true
 
@@ -266,6 +283,9 @@ jobs:
         id: image
         run: cat ./image.info >> $GITHUB_OUTPUT && cat $GITHUB_OUTPUT
 
+      - name: Install Tools
+        run: sudo apt-get install -y uuid-runtime 
+
       - uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
@@ -274,7 +294,10 @@ jobs:
         id: archiveDisk
         uses: azure/CLI@v2
         with:
+          azcliversion: ${{ env.azureCliVersion }}
           inlineScript: |
+            sudo apt-get install -y uuid-runtime 
+            
             DISK_NAME=$(uuidgen --md5 --namespace $(az account show --query tenantId --output tsv) --name ${{ steps.image.outputs.gallery_imageid }})
             DISK_LOCATION=$(az sig show --subscription ${{ steps.image.outputs.gallery_subscription }} --resource-group ${{ steps.image.outputs.gallery_resourcegroup }} --gallery-name ${{ steps.image.outputs.gallery_name }} --query location --output tsv)
             
@@ -303,6 +326,7 @@ jobs:
       - name: Upload Archive Disk
         uses: azure/CLI@v2
         with:
+          azcliversion: ${{ env.azureCliVersion }}
           inlineScript: |
             GALLERY_ID=$(az sig show --subscription ${{ steps.image.outputs.gallery_subscription }} --resource-group ${{ steps.image.outputs.gallery_resourcegroup }} --gallery-name ${{ steps.image.outputs.gallery_name }} --query id --output tsv)
             ARCHIVE_NAME=$([ -z "${{ steps.image.outputs.archive_name }}" ] && (echo "archive$(uuidgen --md5 --namespace $(az account show --query tenantId --output tsv) --name $GALLERY_ID | tr -d '-')" | cut -c -24) || echo "${{ steps.image.outputs.archive_name }}" )
@@ -337,5 +361,6 @@ jobs:
       - name: Delete Archive Disk
         uses: azure/CLI@v2
         with:
+          azcliversion: ${{ env.azureCliVersion }}
           inlineScript: |
             az disk delete --ids ${{ steps.archiveDisk.outputs.resourceId }} --no-wait --yes
