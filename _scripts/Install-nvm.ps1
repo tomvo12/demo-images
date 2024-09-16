@@ -5,7 +5,7 @@ Get-ChildItem -Path (Join-Path $env:DEVBOX_HOME 'Modules') -Directory | Select-O
 
 if (Test-IsPacker) {
 	Write-Host ">>> Register ActiveSetup"
-	Register-ActiveSetup -Path $MyInvocation.MyCommand.Path -Name 'Install-nvm.ps1' -Elevate
+	Register-ActiveSetup -Path $MyInvocation.MyCommand.Path -Name 'Install-nvm.ps1'
 } else { 
     Write-Host ">>> Initializing transcript"
     Start-Transcript -Path ([system.io.path]::ChangeExtension($MyInvocation.MyCommand.Path, ".log")) -Append -Force -IncludeInvocationHeader; 
@@ -34,8 +34,8 @@ arch: $(&{ if ([Environment]::Is64BitOperatingSystem) { '64' } else { '' } })
 proxy: none
 "@ # | Out-File -FilePath "$nvm_home/settings.txt" -Force -Encoding utf8
 
-$Utf8NoBomEncoding = New-Object System.Text.UTF8Encoding $False
-[System.IO.File]::WriteAllLines("$nvm_home/settings.txt", $content, $Utf8NoBomEncoding)
+    $Utf8NoBomEncoding = New-Object System.Text.UTF8Encoding $False
+    [System.IO.File]::WriteAllLines("$nvm_home/settings.txt", $content, $Utf8NoBomEncoding)
 
     Write-Host ">>> Installed nvm into $nvm_home"
 }
