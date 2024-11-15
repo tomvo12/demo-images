@@ -30,6 +30,37 @@ $adminWinGetConfig = @"
 }
 "@
 
+function Install-Package() {
+	param (
+		[Parameter()]
+		[string] $Path
+	)
+
+	try
+	{
+		Write-Host ">>> Installing Package: $Path"
+		Add-AppxPackage -Path $Path -ForceApplicationShutdown -ForceUpdateFromAnyVersion -ErrorAction Stop
+	}
+	catch
+	{
+		if ($_.Exception.Message -match '0x80073D06') {
+			Write-Warning ($_.Exception.Message)
+		} else {
+
+			$activityIdsPattern = '\b[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}\b'
+			$activityIds = [regex]::Matches($_.Exception.Message, $activityIdsPattern) | ForEach-Object { $_.Value } | Select-Object -Unique
+
+			$activityIds | ForEach-Object {
+				Write-Warning ($_.Exception.Message)
+				Write-Host "----------------------------------------------------------------------------------------------------------"
+				Get-AppxLog -ActivityId $_ | Out-Host
+			}
+
+			throw
+		}
+	}
+}
+
 Invoke-ScriptSection -Title "Installing WinGet Package Manager" -ScriptBlock {
 
 	$offlineDirectory =	New-Item -Path (Join-Path $env:DEVBOX_HOME 'Offline\WinGet') -ItemType Directory -Force | Select-Object -ExpandProperty FullName
@@ -37,42 +68,47 @@ Invoke-ScriptSection -Title "Installing WinGet Package Manager" -ScriptBlock {
 
 	$osType = (&{ if ([Environment]::Is64BitOperatingSystem) { 'x64' } else { 'x86' } })
 	Write-Host "- OS Type: $osType"
-	
-	$url = "https://aka.ms/Microsoft.VCLibs.$osType.14.00.Desktop.appx"
-	$loc = Join-Path $offlineDirectory ([IO.Path]::GetFileName($url))
 
-	if (-not (Test-Path $loc -PathType Leaf)) {
-		Write-Host ">>> Downloading WinGet pre-requisites ($osType) - Microsoft.VCLibs ..."
-		$path = Invoke-FileDownload -Url $url -Name ([IO.Path]::GetFileName($loc))
-		Move-Item -Path $path -Destination $loc -Force | Out-Null
+	$loc = Join-Path $offlineDirectory 'Dependencies'
+
+	if (-not(Test-Path $loc -PathType Leaf)) {
+
+		Write-Host ">>> Downloading WinGet dependencies ..."
+
+		$url = Get-GitHubLatestReleaseDownloadUrl -Organization 'microsoft' -Repository 'winget-cli' -Asset 'DesktopAppInstaller_Dependencies.zip'
+		$path = Join-Path (Invoke-FileDownload -Url $url -Expand -Retries 5) $osType
+		
+		Get-ChildItem -Path $path -Filter '*.*' | ForEach-Object {
+			
+			if (-not(Test-Path $loc -PathType Container)) {
+				Write-Host ">>> Creating dependency directory: $loc"
+				New-Item -Path $loc -ItemType Directory -Force | Out-Null
+			}
+
+			$destination = Join-Path $loc ([IO.Path]::GetFileName($_.FullName))
+
+			Write-Host ">>> Moving $($_.FullName) > $destination"
+			Move-Item -Path $_.FullName -Destination $destination -Force | Out-Null
+		}
 	}
 
-	Write-Host ">>> Installing WinGet pre-requisites ($osType) - Microsoft.VCLibs ..."
-	Add-AppxPackage -Path $loc -ErrorAction Stop
-
-	$url = "https://www.nuget.org/api/v2/package/Microsoft.UI.Xaml/2.8.6"
-	$loc = Join-Path $offlineDirectory 'Microsoft.UI.Xaml.2.8.appx'
-
-	if (-not (Test-Path $loc -PathType Leaf)) {
-		Write-Host ">>> Downloading WinGet pre-requisites ($osType) - Microsoft.UI.Xaml ..."
-		$path = Invoke-FileDownload -Url $url -Name 'Microsoft.UI.Xaml.zip' -Expand $true
-		Move-Item -Path (Join-Path $path "tools\AppX\$osType\Release\Microsoft.UI.Xaml.2.8.appx") -Destination $loc -Force | Out-Null
-	}
-
-	Write-Host ">>> Installing WinGet pre-requisites ($osType) - Microsoft.UI.Xaml ..."
-	Add-AppxPackage -Path $loc -ErrorAction Stop
+	Write-Host ">>> Installing WinGet dependencies ..."
+	Get-ChildItem -Path $loc -Filter '*.*' | ForEach-Object { Install-Package -Path $_.FullName }
 
 	$url = Get-GitHubLatestReleaseDownloadUrl -Organization 'microsoft' -Repository 'winget-cli' -Asset 'msixbundle'
 	$loc = Join-Path $offlineDirectory ([IO.Path]::GetFileName($url))
 
 	if (-not (Test-Path $loc -PathType Leaf)) {
+
 		Write-Host ">>> Downloading WinGet CLI ..."
-		$path = Invoke-FileDownload -Url $url -Name ([IO.Path]::GetFileName($loc))
+		$path = Invoke-FileDownload -Url $url -Name ([IO.Path]::GetFileName($loc)) -Retries 5
+		
+		Write-Host ">>> Moving $path > $loc"
 		Move-Item -Path $path -Destination $loc -Force | Out-Null
 	}
 
 	Write-Host ">>> Installing WinGet CLI..."
-	Add-AppxPackage -Path $loc -ErrorAction Stop
+	Install-Package -Path $loc 
 
 	if (Test-IsElevated) {
 		Write-Host ">>> Resetting WinGet Sources ..."
@@ -82,14 +118,14 @@ Invoke-ScriptSection -Title "Installing WinGet Package Manager" -ScriptBlock {
 	$url = "https://cdn.winget.microsoft.com/cache/source.msix"
 	$loc = Join-Path $offlineDirectory ([IO.Path]::GetFileName($url))
 
-	if (-not (Test-Path $loc -PathType Leaf)) {
+	if (-not(Test-Path $loc -PathType Leaf)) {
 		Write-Host ">>> Downloading WinGet Source Cache Package ..."
 		$path = Invoke-FileDownload -Url $url -Name ([IO.Path]::GetFileName($loc)) -Retries 5
 		Move-Item -Path $path -Destination $loc -Force | Out-Null
 	}
 
 	Write-Host ">>> Installing WinGet Source Cache Package ..."	
-	Add-AppxPackage -Path $loc -ErrorAction Stop
+	Install-Package -Path $loc 
 }
 
 if (Test-IsPacker) {
@@ -97,7 +133,7 @@ if (Test-IsPacker) {
 
 		$wingetPackageFamilyName = Get-AppxPackage -Name 'Microsoft.DesktopAppInstaller' | Select-Object -ExpandProperty PackageFamilyName
 
-		$settingsPaths = @(
+		@(
 
 			"%LOCALAPPDATA%\Packages\$wingetPackageFamilyName\LocalState\settings.json",
 			"%LOCALAPPDATA%\Microsoft\WinGet\Settings\settings.json"

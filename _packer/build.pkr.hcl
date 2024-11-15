@@ -41,6 +41,15 @@ build {
   }
 
   # =============================================================================================
+  # Install Windows Updates (1/3)
+  # =============================================================================================
+
+  provisioner "windows-update" {
+    search_criteria = local.update.search
+    filters = local.update.filters
+  }
+
+  # =============================================================================================
   # Enable Windows Features 
   # =============================================================================================
 
@@ -73,7 +82,7 @@ build {
   }
 
   # =============================================================================================
-  # Install Windows Updates (1/2)
+  # Install Windows Updates (2/3)
   # =============================================================================================
 
   provisioner "windows-update" {
@@ -137,11 +146,12 @@ build {
   # =============================================================================================
 
   provisioner "powershell" {
-    elevated_user     = build.User
-    elevated_password = build.Password
-    environment_vars  = local.environment
-    inline            = [templatefile("${local.path.imageRoot}/../_templates/InstallPackages.pkrtpl.hcl", { packages = local.resolved.packages })]
-    max_retries       = 10
+    elevated_user       = build.User
+    elevated_password   = build.Password
+    environment_vars    = local.environment
+    inline              = [templatefile("${local.path.imageRoot}/../_templates/InstallPackages.pkrtpl.hcl", { packages = local.resolved.packages })]
+    max_retries         = 30
+    start_retry_timeout = "2m"
   }
 
   provisioner "windows-restart" {
@@ -188,7 +198,7 @@ build {
   }
 
   # =============================================================================================
-  # Install Windows Updates (2/2)
+  # Install Windows Updates (3/3)
   # =============================================================================================
 
   provisioner "windows-update" {
@@ -204,7 +214,7 @@ build {
 	  elevated_user     = build.User
     elevated_password = build.Password
     environment_vars  = local.environment
-    timeout           = "1h"
+    timeout           = "2h"
     script            = "${local.path.imageRoot}/../_scripts/core/Generalize-VM.ps1"
   }
 
