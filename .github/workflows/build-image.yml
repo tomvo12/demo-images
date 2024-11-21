@@ -18,8 +18,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  # Azure CLI version 2.64.0 is broken (https://github.com/Azure/azure-cli/issues/29830). Fall back to latest when fixed.
-  azureCliVersion: 2.63.0
+  # Azure CLI version 2.64.0 is broken (https://github.com/Azure/azure-cli/issues/29830)
+  azureCliVersion: latest
 
 jobs:
   build:
@@ -66,6 +66,7 @@ jobs:
           echo "archive_subscription=$(echo $HCLJSON | jq --raw-output '.image.archive.subscription // empty')" >> $GITHUB_OUTPUT
           echo "archive_resourcegroup=$(echo $HCLJSON | jq --raw-output '.image.archive.resourceGroup // empty')" >> $GITHUB_OUTPUT
           echo "archive_name=$(echo $HCLJSON | jq --raw-output '.image.archive.name // empty')" >> $GITHUB_OUTPUT
+          echo "archive_container=$(echo $HCLJSON | jq --raw-output '.image.archive.container // empty')" >> $GITHUB_OUTPUT
           echo "devcenter_subscription=$(echo $HCLJSON | jq --raw-output '.image.devCenter.subscription // empty')" >> $GITHUB_OUTPUT
           echo "devcenter_resourcegroup=$(echo $HCLJSON | jq --raw-output '.image.devCenter.resourceGroup // empty')" >> $GITHUB_OUTPUT
           echo "devcenter_name=$(echo $HCLJSON | jq --raw-output '.image.devCenter.name // empty')" >> $GITHUB_OUTPUT          
@@ -188,7 +189,7 @@ jobs:
         working-directory: ${{ format('./{0}', inputs.imageName) }}
     
     outputs:
-      archive: ${{ steps.image.outputs.archive_subscription != '' && steps.image.outputs.archive_resourcegroup != '' }}
+      archive: ${{ steps.image.outputs.archive_subscription != '' && steps.image.outputs.archive_resourcegroup != '' && steps.image.outputs.archive_name != ''}}
 
     steps:
 
@@ -283,9 +284,6 @@ jobs:
         id: image
         run: cat ./image.info >> $GITHUB_OUTPUT && cat $GITHUB_OUTPUT
 
-      - name: Install Tools
-        run: sudo apt-get install -y uuid-runtime 
-
       - uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
@@ -296,14 +294,18 @@ jobs:
         with:
           azcliversion: ${{ env.azureCliVersion }}
           inlineScript: |
-            sudo apt-get install -y uuid-runtime 
-            
-            DISK_NAME=$(uuidgen --md5 --namespace $(az account show --query tenantId --output tsv) --name ${{ steps.image.outputs.gallery_imageid }})
-            DISK_LOCATION=$(az sig show --subscription ${{ steps.image.outputs.gallery_subscription }} --resource-group ${{ steps.image.outputs.gallery_resourcegroup }} --gallery-name ${{ steps.image.outputs.gallery_name }} --query location --output tsv)
-            
-            echo "resourceId=$(az disk create \
+            DISK_NAME="$(echo "${{ steps.image.outputs.gallery_imageid }}" | cut -d/ -f11)-$(echo "${{ steps.image.outputs.gallery_imageid }}" | cut -d/ -f13)"
+
+            DISK_LOCATION="$(az sig show \
               --subscription ${{ steps.image.outputs.gallery_subscription }} \
               --resource-group ${{ steps.image.outputs.gallery_resourcegroup }} \
+              --gallery-name ${{ steps.image.outputs.gallery_name }} \
+              --query location \
+              --output tsv)"
+            
+            echo "resourceId=$(az disk create \
+              --subscription ${{ steps.image.outputs.archive_subscription }} \
+              --resource-group ${{ steps.image.outputs.archive_resourcegroup }} \
               --location $DISK_LOCATION \
               --name $DISK_NAME \
               --gallery-image-reference ${{ steps.image.outputs.gallery_imageid }} \
@@ -313,8 +315,8 @@ jobs:
               --output tsv)" >> $GITHUB_OUTPUT
             
             echo "resourceUrl=$(az disk grant-access \
-              --subscription ${{ steps.image.outputs.gallery_subscription }} \
-              --resource-group ${{ steps.image.outputs.gallery_resourcegroup }} \
+              --subscription ${{ steps.image.outputs.archive_subscription }} \
+              --resource-group ${{ steps.image.outputs.archive_resourcegroup }} \
               --name $DISK_NAME \
               --duration-in-seconds 3600 \
               --access-level read \
@@ -328,39 +330,30 @@ jobs:
         with:
           azcliversion: ${{ env.azureCliVersion }}
           inlineScript: |
-            GALLERY_ID=$(az sig show --subscription ${{ steps.image.outputs.gallery_subscription }} --resource-group ${{ steps.image.outputs.gallery_resourcegroup }} --gallery-name ${{ steps.image.outputs.gallery_name }} --query id --output tsv)
-            ARCHIVE_NAME=$([ -z "${{ steps.image.outputs.archive_name }}" ] && (echo "archive$(uuidgen --md5 --namespace $(az account show --query tenantId --output tsv) --name $GALLERY_ID | tr -d '-')" | cut -c -24) || echo "${{ steps.image.outputs.archive_name }}" )
-            ARCHIVE_LOCATION=$(az sig show --subscription ${{ steps.image.outputs.gallery_subscription }} --resource-group ${{ steps.image.outputs.gallery_resourcegroup }} --gallery-name ${{ steps.image.outputs.gallery_name }} --query location --output tsv)
+          
+            ACCOUNT_NAME="${{ steps.image.outputs.archive_name }}"
+            ACCOUNT_KEY=$(az storage account keys list --subscription ${{ steps.image.outputs.archive_subscription }} --resource-group ${{ steps.image.outputs.archive_resourcegroup }} --account-name ${{ steps.image.outputs.archive_name }} --query [0].value --output tsv)
+            CONTAINER_NAME=$([ -z "${{ steps.image.outputs.archive_container }}" ] && echo "archive" || echo "${{ steps.image.outputs.archive_container }}")
+            BLOB_NAME="$(echo "${{ steps.archiveDisk.outputs.resourceId }}" | cut -d/ -f9).vhd"
+
+            az storage blob copy start \
+              --destination-blob $BLOB_NAME \
+              --destination-container $CONTAINER_NAME \
+              --account-name $ACCOUNT_NAME \
+              --account-key $ACCOUNT_KEY \
+              --source-uri "${{ steps.archiveDisk.outputs.resourceUrl }}" 
             
-            if [ -z "$(az storage account show --subscription ${{ steps.image.outputs.archive_subscription }} --resource-group ${{ steps.image.outputs.archive_resourcegroup }} --name $ARCHIVE_NAME --query id --output tsv 2> /dev/null)" ]; then
-              az storage account create \
-                --subscription ${{ steps.image.outputs.archive_subscription }} \
-                --resource-group ${{ steps.image.outputs.archive_resourcegroup }} \
-                --name $ARCHIVE_NAME \
-                --location $ARCHIVE_LOCATION \
-                --kind StorageV2 \
-                --sku Standard_LRS
-            fi
-            
-            CONTAINER_NAME=$(echo "${{ inputs.imageName }}" | tr '[:upper:]' '[:lower:]')
-            
-            if [ "$(az storage container exists --subscription ${{ steps.image.outputs.archive_subscription }} --account-name $ARCHIVE_NAME --name $CONTAINER_NAME --auth-mode login --query exists --output tsv)" == "false" ]; then
-              az storage container create \
-                --subscription ${{ steps.image.outputs.archive_subscription }} \
-                --account-name $ARCHIVE_NAME \
-                --name $CONTAINER_NAME \
-                --auth-mode login \
-                --output none
-            fi
-            
-            CONTAINER_SAS=$(az storage container generate-sas --subscription ${{ steps.image.outputs.archive_subscription }} --account-name $ARCHIVE_NAME --name $CONTAINER_NAME --as-user --auth-mode login --permissions acw --expiry $(date -d '+1 hour' +"%Y-%m-%dT%H:%MZ") --output tsv)
-            CONTAINER_URL="$(az storage account show --subscription ${{ steps.image.outputs.archive_subscription }} --resource-group ${{ steps.image.outputs.archive_resourcegroup }} --name $ARCHIVE_NAME --query id --output tsv)$CONTAINER_NAME/${{ inputs.imageName }}-${{ inputs.imageVersion }}.vhd?$CONTAINER_SAS"
-            
-            azcopy copy "${{ steps.archiveDisk.outputs.resourceUrl }}" "$CONTAINER_URL" --blob-type PageBlob
+            echo "Copying disk to archive storage account is in progress - retry in 60 sec"; sleep 60
+            while [ "pending" = "$(az storage blob show --name $BLOB_NAME --container-name $CONTAINER_NAME --account-name $ACCOUNT_NAME --account-key $ACCOUNT_KEY --query properties.copy.status --output tsv)" ]; do
+              echo "Copying disk to archive storage account is in progress - retry in 60 sec"; sleep 60 
+            done
 
       - name: Delete Archive Disk
         uses: azure/CLI@v2
+        if: always() && ${{ steps.archiveDisk.outputs.resourceId != '' }}    
+        continue-on-error: true            
         with:
           azcliversion: ${{ env.azureCliVersion }}
           inlineScript: |
-            az disk delete --ids ${{ steps.archiveDisk.outputs.resourceId }} --no-wait --yes
+            az disk revoke-access --ids ${{ steps.archiveDisk.outputs.resourceId }}
+            az disk delete --ids ${{ steps.archiveDisk.outputs.resourceId }} --yes
