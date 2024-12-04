@@ -1,0 +1,56 @@
+{
+	"$schema": "../_schemas/image.schema.json",
+	"publisher": "DeveloperCompass",
+	"offer": "DevBox",
+	"sku": "coverity",
+	"regions": [
+		"Germany West Central"
+	],
+	"base": {
+		"publisher": "MicrosoftVisualStudio",
+		"offer": "windowsplustools",
+		"sku": "base-win11-gen2",
+		"version": "2024.09.12"
+	},
+	"gallery": {
+		"subscription": "261a4972-a913-4301-a6b3-805f497816ab",
+		"resourceGroup": "DevCenter-DevCompass-prod",
+		"name": "DevCompass_prod"
+	},
+	"devCenter": {
+		"subscription": "261a4972-a913-4301-a6b3-805f497816ab",
+		"resourceGroup": "DevCenter-DevCompass-prod",
+		"name": "DevCompass-prod",
+		"compute": "general_i_8c32gb1024ssd_v2",
+		"storage": "ssd_1024gb"
+	},
+	"devDrive": {
+		"sizeGB": 200,
+		"filters": [
+			"bindFlt",
+			"wcifs",
+			"PrjFlt",
+			"MsSecFlt",
+			"WdFilter",
+			"FileInfo",
+			"ProcMon24",
+			"WinSetupMon"
+		],
+		"repositories": []
+	},
+	"features": [],
+	"prepare": [],
+	"packages": [
+		{
+			"name": "Microsoft.DotNet.SDK.8",
+			"scope": "machine"
+		},
+		{
+			"name": "GitHub.cli",
+			"scope": "machine"
+		}
+	],
+	"configure": [
+		"[IMAGEROOT]/../_scripts/Install-nvm.ps1"
+	]
+}
