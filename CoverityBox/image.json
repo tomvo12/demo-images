@@ -51,6 +51,6 @@
 		}
 	],
 	"configure": [
-		"[IMAGEROOT]/../_scripts/Install-nvm.ps1"
+		"[IMAGEROOT]/../_scripts/Install-Coverity.ps1"
 	]
 }
